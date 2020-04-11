@@ -77,6 +77,8 @@ def get_pod(app, namespace):
     print(f'Executing {cmd}')
     stream = os.popen(cmd)
     result = json.loads(stream.read())
+    if len(result['items']) == 0:
+        raise Exception(f'{app} not found in {namespace}')
     pod = result['items'][0]['metadata']['name']
     return pod, result
 
@@ -132,39 +134,49 @@ Use _{me} describe_ to get the description for the app that is set for the curre
 '''
 
 
-@RTMClient.run_on(event="message")
+@RTMClient.run_on(event="message")  # subscribe to 'message' events
 def process_command(**payload):
     data = payload['data']
     web_client = payload['web_client']
     print(payload)
-    is_service = 'subtype' in data and data['subtype'] is not None  # service messages, like joining a channel
+    # ignore service messages, like joining a channel
+    is_service = 'subtype' in data and data['subtype'] is not None
 
     if not is_service and 'text' in data:
         channel_id = data['channel']
         thread_ts = data['ts']
         user = data['user']
-        text = data['text']
-        tokens = text.split()  # Put your fancy NLP here
-        me = tokens[0]
+        text = data['text']  # get data from the event
+        tokens = text.split()  # split it up by space characters
+        me = tokens[0]  # user id of the cht bot
+        # object to track the conversation state
         conv = Conversation(web_client, channel_id, user)
         if len(tokens) > 1:
             print(tokens)
+            # first token is my userid, second will be the command e.g. logs
             command = tokens[1]
             print('received command ' + command)
             if command in commands:
+                # get the actual command executor
                 command_func = commands[command]
                 try:
-                    result = command_func(conv, tokens[slice(2, len(tokens))])
+                    args = tokens[slice(2, len(tokens))]
+                    # execute the command
+                    result = command_func(conv, args)
                     if result is not None:
+                        # and return the value from the
+                        # command back to the user
                         conv.msg(result)
                 except Exception as e:
                     conv.msg(str(e))
 
             else:
+                # show welcome message
                 web_client.chat_postMessage(
                     conv.msg(welcome.format(user=user, me=me))
                 )
         else:
+            # show welcome message
             conv.msg(welcome.format(user=user, me=me))
 
 
