@@ -5,10 +5,6 @@ from slack import RTMClient
 
 from db import select_app, update_app, init_db
 
-context = 'minikube'
-
-
-
 
 def find_pod(user: str):
     app, namespace = select_app(user)
@@ -30,7 +26,7 @@ def logs_command(conv, tokens):
 
     result = find_pod(user)
     if result is None:
-        return f"No app has been set for {user} " # yeah, error handling should be better here
+        return f"No app has been set for {user} "  # yeah, error handling should be better here
 
     return logs(result['pod'], result['namespace'])
 
@@ -43,7 +39,7 @@ def describe_command(conv, tokens):
 
     result = find_pod(user)
     if result is None:
-        return f"No app has been set for {user} " # yeah, error handling should be better here
+        return f"No app has been set for {user} "  # yeah, error handling should be better here
 
     return describe(result['pod'], result['namespace'])
 
@@ -76,8 +72,6 @@ def set_app_command(conv, tokens):
         return f"Successfully set app for {user} to {app} (currently at pod {pod})"
 
 
-
-
 def get_pod(app, namespace):
     cmd = f'kubectl get pods --selector=app={app} --namespace={namespace} -ojson'
     print(f'Executing {cmd}')
@@ -87,18 +81,18 @@ def get_pod(app, namespace):
     return pod, result
 
 
-def logs(pod,  namespace):
+def logs(pod, namespace):
     cmd = f'kubectl logs  {pod} --namespace={namespace}'
     print(f'Executing {cmd}')
     stream = os.popen(cmd)
     return stream.read()
 
-def describe(pod,  namespace):
+
+def describe(pod, namespace):
     cmd = f'kubectl describe pod {pod} --namespace={namespace}'
     print(f'Executing {cmd}')
     stream = os.popen(cmd)
     return stream.read()
-
 
 
 commands = {
@@ -129,7 +123,7 @@ class Conversation:
         )
 
 
-welcome ='''
+welcome = '''
 Hi there <@{user}>. I'm your friendly neighbourhood DevOps bot.
 Use _{me} set-app @user application namespace_ to set the current app for a user
 Use _{me} get-app @user_ to get the current app (or leave user out for the current user)
@@ -137,12 +131,13 @@ Use _{me} logs_ to get the logs for the app that is set for the current user
 Use _{me} describe_ to get the description for the app that is set for the current user 
 '''
 
+
 @RTMClient.run_on(event="message")
 def process_command(**payload):
     data = payload['data']
     web_client = payload['web_client']
     print(payload)
-    is_service = 'subtype' in data and data['subtype'] is not None # service messages, like joining a channel
+    is_service = 'subtype' in data and data['subtype'] is not None  # service messages, like joining a channel
 
     if not is_service and 'text' in data:
         channel_id = data['channel']
@@ -167,7 +162,7 @@ def process_command(**payload):
 
             else:
                 web_client.chat_postMessage(
-                    conv.msg(welcome.format(user = user, me = me))
+                    conv.msg(welcome.format(user=user, me=me))
                 )
         else:
             conv.msg(welcome.format(user=user, me=me))
